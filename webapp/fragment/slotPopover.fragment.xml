@@ -1,0 +1,46 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Popover id="myPopover" contentHeight="500px" contentWidth="400px" modal="true" titleAlignment="Center" showHeader="false" placement="Auto">
+		<Table id="tblSlotList" class="sapUiSizeCompact">
+			<headerToolbar>
+				<OverflowToolbar>
+					<content>
+						<Title text="Slots" level="H2"/>
+						<ToolbarSpacer/>
+						<Button text="Add Slot" type="Emphasized" press="onPressAddSlotLocal"/>
+					</content>
+				</OverflowToolbar>
+			</headerToolbar>
+			<columns>
+				<Column width="2%">
+					<Text text="Slot No"/>
+				</Column>
+				<Column width="7%">
+					<Text text="Start Time"/>
+				</Column>
+				<Column width="7%">
+					<Text text="End Time"/>
+				</Column>
+				<Column width="5%">
+					<Text text="Delete"/>
+				</Column>
+			</columns>
+			<!--<items>
+				<ColumnListItem vAlign="Middle">
+					<cells>
+						<Text text="{RosteringListModel>SLOT_NUMBER}"/>
+						<Text text="{RosteringListModel>START_TIME}"/>
+						<Text text="{RosteringListModel>END_TIME}"/>
+						<Button icon="sap-icon://delete" press="onPressDeleteSlots" type="Transparent"/>
+					</cells>
+				</ColumnListItem>
+			</items>-->
+		</Table>
+		<footer>
+			<Toolbar>
+			<Button text="Cancel" type="Transparent" press="onCancelPopOverSlots"/>
+			<ToolbarSpacer/>
+				<Button text="Save" type="Emphasized" press="onSaveSlotsLocal"/>
+			</Toolbar>
+		</footer>
+	</Popover>
+</core:FragmentDefinition>

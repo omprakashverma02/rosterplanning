@@ -1,0 +1,26 @@
+<core:FragmentDefinition xmlns:core="sap.ui.core" class="sapUiSizeCompact" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
+	xmlns:f="sap.ui.layout.form" xmlns:l="sap.ui.layout">
+	<Dialog id="dlgAddRoster" title="Add Job" contentWidth="40%" contentHeight="20%" showHeader="true">
+		<content>
+			<l:Grid defaultSpan="L12 M12 S12">
+				<l:content>
+					<f:SimpleForm minWidth="1024" maxContainerCols="2" editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4"
+						emptySpanL="2" emptySpanM="2" columnsL="2" columnsM="2" class="sapUiSizeCompact">
+						<f:content>
+							<Label text="Select Job" labelFor="cmbSelectedPositionForRoster"/>
+							<ComboBox selectionChange="onSelectionChangePosition" id="cmbSelectedPositionForRoster" required="true" selectedKey="{RosteringListModel>/selectedJobCodeForRoster}" items="{RosteringListModel>/jobTitles}"
+								showSecondaryValues="true">
+								<core:ListItem key="{RosteringListModel>jobCodeId}" text="{RosteringListModel>jobTitleDesc}" additionalText="{RosteringListModel>jobCodeId}"/>
+							</ComboBox>
+						</f:content>
+					</f:SimpleForm>
+				</l:content>
+			</l:Grid>
+			
+		</content>
+		<buttons>
+			<Button text="Cancel" type="Transparent" press="handleFgAddRosterClose" class="sapUiSizeCompact"/>
+			<Button text="Proceed" type="Emphasized" press="handleFgAddRoster" class="sapUiSizeCompact"/>
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

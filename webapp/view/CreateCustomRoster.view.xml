@@ -1,0 +1,43 @@
+<mvc:View xmlns:core="sap.ui.core" controllerName="rosterplanningvk.rosterplanningvk.controller.CreateCustomRoster"
+	xmlns="sap.ui.table" xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" height="100%">
+	<m:Shell appWidthLimited="false">
+		<m:App id="idAppControl">
+			<m:Page showHeader="false" enableScrolling="false" class="sapUiTinyMarginTop sapUiSizeCompact sapUiNoContentPadding">
+				<m:content>
+					<Table id="tblRosteringList"
+					enableCellFilter="true"
+					fixedColumnCount="1" alternateRowColors="true" enableBusyIndicator="true" 
+					ariaLabelledBy="title" selectionMode="MultiToggle" rows="{RosteringListModel>/rosterItems}"
+						visibleRowCountMode="Auto" enableColumnFreeze="true" showColumnVisibilityMenu="false">
+						<extension>
+							<m:OverflowToolbar style="Clear">
+									<m:Button text="" icon="sap-icon://nav-back" press="onPressCancel" type="Default" class="sapUiSmallMarginEnd"/>
+								<m:Title id="title" titleStyle="H2" text="{RosteringListModel>/rosterName}"/>
+								<m:ToolbarSpacer/>
+								<m:Slider id="sliderHandlingWidth" width="30%" value="8" enableTickmarks="true" min="4" max="10" change="onChangeSlider"></m:Slider>
+								<m:Switch type="AcceptReject" change="onChangeRosterStatus"  state="{RosteringListModel>/customRosterStatus}" customTextOn="Active" customTextOff="Draft">
+								
+							</m:Switch>
+								<m:Button icon="sap-icon://add" text="Add Job" type="Transparent" tooltip="Add Rostering" press="onPressAddRoster"/>
+								<m:Button icon="sap-icon://delete" text="Delete Job" type="Transparent" tooltip="Delete Rostering" press="onPressDeleteRoster"/>
+								<m:Button icon="sap-icon://excel-attachment" text="Export" type="Transparent" tooltip="Export" press="onPressExport"/>
+							</m:OverflowToolbar>
+						</extension>
+					</Table>
+				</m:content>
+				<m:footer>
+					<m:Bar>
+						<m:contentLeft>
+						<!--	<m:Button text="Cancel" press="onPressCancel" type="Default"/>-->
+						</m:contentLeft>
+						<m:contentMiddle></m:contentMiddle>
+						<m:contentRight>
+							<m:Button text="Save" press="onPressSave" type="Emphasized"/>
+							<!--<m:Button text="Submit" press="onPressSubmit" type="Emphasized"/>-->
+						</m:contentRight>
+					</m:Bar>
+				</m:footer>
+			</m:Page>
+		</m:App>
+	</m:Shell>
+</mvc:View>

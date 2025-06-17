@@ -1,0 +1,33 @@
+<core:FragmentDefinition xmlns:core="sap.ui.core" class="sapUiSizeCompact" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
+	xmlns:f="sap.ui.layout.form" xmlns:l="sap.ui.layout">
+	<Dialog id="dlgCreateRoster" title="Create Roster" contentWidth="60%" contentHeight="60%" showHeader="true">
+		<content>
+			<MessageStrip text="Please Note : Roster Code must be unique, duplication is not allowed." type="Information" showIcon="true" class="sapUiTinyMargin"></MessageStrip>
+			<l:Grid defaultSpan="L12 M12 S12">
+				<l:content>
+					<f:SimpleForm minWidth="1024" maxContainerCols="2" editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4"
+						emptySpanL="2" emptySpanM="2" columnsL="2" columnsM="2" class="sapUiSizeCompact">
+						<f:content>
+							<Label text="Roster Name" labelFor="inpCustomRosterName"/>
+							<Input id="inpCustomRosterName" required="true" value="{RosteringListModel>/customRosterName}" placeholder="Please provide roster name"/>
+							<Label text="Roster Code" labelFor="inpRosterCode"/>
+							<Input id="inpRosterCode" required="true" value="{RosteringListModel>/customRosterCode}" placeholder="Please provide unique roster code"/>
+							<Label text="Number of days for Roster" labelFor="inpRosterDays"/>
+							<Input id="inpRosterDays" required="true" value="{RosteringListModel>/customRosterDays}" placeholder="Please provide number of days"/>
+							<!--<Label text="Status"/>
+							<Switch state="{RosteringListModel>/customRosterStatus}" customTextOn="Active" customTextOff="Draft">
+								<layoutData>
+									<FlexItemData growFactor="1"/>
+								</layoutData>
+							</Switch>-->
+						</f:content>
+					</f:SimpleForm>
+				</l:content>
+			</l:Grid>
+		</content>
+		<buttons>
+			<Button text="Cancel" type="Transparent" press="onPressCancelCustomRoster" class="sapUiSizeCompact"/>
+			<Button text="Create" type="Emphasized" press="onPressCreateCustomRoster" class="sapUiSizeCompact"/>
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,74 @@
+<mvc:View controllerName="rosterplanningvk.rosterplanningvk.controller.Home"
+    xmlns:mvc="sap.ui.core.mvc" displayBlock="true" xmlns="sap.m"
+    xmlns:u="sap.ui.unified" xmlns:fb="sap.ui.comp.filterbar" height="100%" xmlns:table="sap.ui.table"> 
+			<Page id="page" title="{i18n>title}" showHeader="false" enableScrolling="false" class="sapUiTinyMarginTop sapUiSizeCompact">
+				<content>
+					<table:Table id="tblCustomRoster"  visibleRowCountMode="Auto" alternateRowColors="false" enableBusyIndicator="true" ariaLabelledBy="title" selectionMode="MultiToggle"
+						rows="{RosteringListModel>/rosterList}">
+						<table:extension>
+								<OverflowToolbar style="Clear">
+								<Title id="title" text="Rosters"/>
+								<Button icon="sap-icon://refresh" text="Refresh" type="Transparent" tooltip="Refresh" press="onPressRefresh"/>
+								<ToolbarSpacer/>
+								<SearchField width="30%" value="" search="onSearch"></SearchField>
+								<Button icon="sap-icon://download" text="Download Template" type="Transparent" tooltip="Download Template" press="onPressDownloadTemplate"/>
+								<u:FileUploader id="massUploadRoster" icon="sap-icon://upload" buttonOnly="true" style="Transparent" buttonText="Upload" name="myFileUpload" tooltip="Upload your file to the local server"
+								change="handleUploadChange" sameFilenameAllowed="true"/>
+								<Button icon="sap-icon://add" text="Add New Roster" type="Transparent" tooltip="Add New Roster" press="onPressCreateRostering"/>
+								<Button icon="sap-icon://delete" text="Delete Roster" type="Transparent" tooltip="Delete Roster" press="onPressDeleteRoster"/>
+								<Button icon="sap-icon://excel-attachment" text="Export Data" type="Transparent" tooltip="Export" press="onPressExport"/>
+							</OverflowToolbar>
+						</table:extension>
+						
+						<table:columns>
+							<table:Column width="20%" hAlign="Center">
+								<Label text="Roster Name" design="Bold" textAlign="Left"/>
+								<table:template>
+									<Link text="{RosteringListModel>ROSTER_NAME}" textAlign="Center" press="onPressRosterName"/>
+								</table:template>
+							</table:Column>
+							<table:Column width="25%" hAlign="Center">
+								<Label text="Roster Code" design="Bold" textAlign="Center"/>
+								<table:template>
+									<Text text="{RosteringListModel>ROSTER_CODE}" textAlign="Center"/>
+								</table:template>
+							</table:Column>
+							<table:Column width="10%" hAlign="Center">
+								<Label text="Rostering Days" design="Bold" textAlign="Center"/>
+								<table:template>
+									<Text text="{RosteringListModel>DAY}" textAlign="Center"/>
+								</table:template>
+							</table:Column>
+							<table:Column width="15%" hAlign="Center">
+								<Label text="Roster Modified By" design="Bold" textAlign="Center"/>
+								<table:template>
+									<Text text="{RosteringListModel>MODIFIEDBY}"/>
+								</table:template>
+							</table:Column>
+							<table:Column width="15%" hAlign="Center">
+								<Label text="Roster Modified On" design="Bold" textAlign="Center"/>
+								<table:template>
+									<Text text="{RosteringListModel>FORMAT_MODIFIED_ON}"/>
+								</table:template>
+							</table:Column>
+							<table:Column width="15%" hAlign="Center">
+								<Label text="Roster Status" design="Bold" textAlign="Center"/>
+								<table:template>
+									<Text text="{RosteringListModel>STATUS}"/>
+								</table:template>
+							</table:Column>
+						</table:columns>
+					</table:Table>
+				</content>
+				<!--<footer>-->
+				<!--	<Bar>-->
+				<!--		<contentLeft></contentLeft>-->
+				<!--		<contentMiddle></contentMiddle>-->
+				<!--		<contentRight>-->
+				<!--			<Button text="Submit" press="onPressSubmit" type="Emphasized"/>-->
+				<!--			<Button text="Cancel" press="onPressCancel" type="Default"/>-->
+				<!--		</contentRight>-->
+				<!--	</Bar>-->
+				<!--</footer>-->
+			</Page>		
+</mvc:View>
