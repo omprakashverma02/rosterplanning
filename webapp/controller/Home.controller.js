@@ -34,7 +34,8 @@ sap.ui.define([
 			var oUserModel = new JSONModel();
 			//oUserModel.loadData("/services/userapi/currentUser", null, true);
 			BusyIndicator.show(0);
-            oUserModel.loadData(sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/userProfile", null, false);
+            oUserModel.loadData(sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/userProfile", null, false);
+			// oUserModel.loadData(sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/userProfile", null, false);
 			oUserModel.dataLoaded().then(function () {
 				sap.ui.getCore().setModel(oUserModel, "userapi");
 				this._fnFetchListRoster();
@@ -169,7 +170,8 @@ sap.ui.define([
 		},
 		_fnFetchListRoster: function () {
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchRoster";
+			// this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/rosterManagement?cmd=fetchRoster";
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchRoster";
 			var oJsonModel = new JSONModel();
 			oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
 			oJsonModel.attachRequestCompleted(function (jsonData, response) {

@@ -15,6 +15,10 @@ server:
             - /resources
             - /test-resources
           url: https://ui5.sap.com
+        backend:
+          - path: /api
+            url: https://ew-btp-cf-dev-dev-vkschservice.cfapps.ap11.hana.ondemand.com/api/
+            destination: DEST_VPP_LICENSE
     - name: fiori-tools-appreload
       afterMiddleware: compression
       configuration:
@@ -24,5 +28,4 @@ server:
     - name: fiori-tools-preview
       afterMiddleware: fiori-tools-appreload
       configuration:
-        flp:
-          theme: sap_horizon
+        flp:theme: sap_horizon

@@ -124,6 +124,6 @@
   },
   "sap.cloud": {
     "public": true,
-    "service": "planningshiftrosteringplanning"
+    "service": "rosterplanningvkrosterplanningvk"
   }
 }
