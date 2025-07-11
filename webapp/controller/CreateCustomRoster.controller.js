@@ -5,8 +5,9 @@ sap.ui.define([
 	"sap/ui/core/BusyIndicator",
 	"sap/m/MessageBox",
 	"sap/ui/export/Spreadsheet",
-	"sap/ui/export/library"
-], function (Controller, JSONModel, models, BusyIndicator, MessageBox, Spreadsheet, exportLibrary) {
+	"sap/ui/export/library",
+	"../util/service"
+], function (Controller, JSONModel, models, BusyIndicator, MessageBox, Spreadsheet, exportLibrary, ServiceHandler) {
 	"use strict";
 	var EdmType = exportLibrary.EdmType;
 	return Controller.extend("rosterplanningvk.rosterplanningvk.controller.CreateCustomRoster", {
@@ -16,7 +17,8 @@ sap.ui.define([
 			// this._onRouteMatched();
 
 		},
-		_onRouteMatched: function (oEvent) {
+
+		_onRouteMatched: async function (oEvent) {
 			BusyIndicator.show(0);
 			this.aDataToSave = [];
 			this.RosterID = oEvent.getParameter("arguments").rosterId;
@@ -27,7 +29,7 @@ sap.ui.define([
 			this.getOwnerComponent().setModel(oModel, "RosteringListModel");
 			this.RosteringListModel = this.getOwnerComponent().getModel("RosteringListModel");
 			var oUserModel = new JSONModel();
-			oUserModel.loadData(sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/userProfile", null, false);
+			await oUserModel.loadData(sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/currentUser", null, false);
 			oUserModel.dataLoaded().then(function () {
 				sap.ui.getCore().setModel(oUserModel, "userapi");
 				this._fnFetchJobTitle();
@@ -38,11 +40,12 @@ sap.ui.define([
 			}.bind(this));
 
 		},
+
 		_getCurrentUser: function () {
 			var oCurrData = sap.ui.getCore().getModel("userapi").getData();
-			var sUserID = oCurrData.data[0].userDetail[0].USERID;
-			oCurrData.name = (sUserID) ? sUserID : oCurrData.data.userDetail[0].FIRSTNAME;
-			if (!oCurrData.name) {
+			var sUserID = oCurrData.pUserId;
+			oCurrData.fullName = (sUserID) ? sUserID : oCurrData.fullName;
+			if (!oCurrData.fullName) {
 				oCurrData = {
 					name: "Default_User",
 					displayName: "Default_User"
@@ -50,52 +53,41 @@ sap.ui.define([
 			}
 			return oCurrData;
 		},
-		_fnFetchPlanningValue: function () {
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchPlanning";
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 1) {
-					this.RosteringListModel.setProperty("/planningValues", oData.data.results);
-				} else {
-					this.RosteringListModel.setProperty("/planningValues", []);
-					MessageBox.error("Data loading failed..!!");
-				}
 
-			}.bind(this));
+		_fnFetchPlanningValue: async function () {
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchPlanning";
+			var response = await ServiceHandler.get(this.sPath);
+			if (response.status === 200) {
+				this.RosteringListModel.setProperty("/planningValues", response.results);
+			} else {
+				this.RosteringListModel.setProperty("/planningValues", []);
+				MessageBox.error("Data loading failed..!!");
+			}
 		},
-		_fnFetchSchedulingValue: function () {
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchSHIFT_CODE";
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 1) {
-					this.RosteringListModel.setProperty("/schedulingValues", oData.data.results);
-				} else {
-					this.RosteringListModel.setProperty("/schedulingValues", []);
-					MessageBox.error("Data loading failed..!!");
-				}
 
-			}.bind(this));
+		_fnFetchSchedulingValue: async function () {
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchSchedulingStatus";
+			var response = await ServiceHandler.get(this.sPath);
+			if (response.status === 200) {
+				this.RosteringListModel.setProperty("/schedulingValues", response.results);
+			} else {
+				this.RosteringListModel.setProperty("/schedulingValues", []);
+				MessageBox.error("Data loading failed..!!");
+			}
 		},
-		_fnFetchJobTitle: function () {
+
+		_fnFetchJobTitle: async function () {
 			// this.RosteringListModel.setProperty("/jobTitles",models._columnList().JobTitle);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchPositions";
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 1) {
-					this.RosteringListModel.setProperty("/jobTitles", oData.data.results);
-				} else {
-					this.RosteringListModel.setProperty("/jobTitles", []);
-					MessageBox.error("Data loading failed..!!");
-				}
-				// BusyIndicator.hide();
-			}.bind(this));
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchPositions";
+			var response = await ServiceHandler.get(this.sPath);
+			if (response.status === 200) {
+				this.RosteringListModel.setProperty("/jobTitles", response.results);
+			} else {
+				this.RosteringListModel.setProperty("/jobTitles", []);
+				MessageBox.error("Data loading failed..!!");
+			}
 		},
+
 		//set header
 		_fnHeaders: function () {
 			var oHeader = {
@@ -107,6 +99,7 @@ sap.ui.define([
 			};
 			return oHeader;
 		},
+
 		//Fetch Token for Making an OData call
 		fetchTokenForSubmit: function (requestUrl) {
 			var token = "";
@@ -126,34 +119,26 @@ sap.ui.define([
 			});
 			return token;
 		},
-		_fnFetchListRoster: function (loadColumn) {
-			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchRosterDaysStructure";
-			var oPayload = {
-				"ROSTER_HEADER_ID": this.RosterID,
-			};
-			var oHeader = this._fnHeaders();
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
-				oHeader);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 1) {
-					this.RosteringListModel.setProperty("/rosterItems", oData.data.rows);
-					this.RosteringListModel.setProperty("/rosterName", oData.data.rosterName);
-					this.RosteringListModel.setProperty("/customRosterStatus", oData.data.rosterStatus);
-					this.rosterDays = oData.data.rosterDays;
-					if (loadColumn) {
-						this._createDynamicColumn(oData.data.rosterDays);
-					}
-				} else {
-					this.RosteringListModel.setProperty("/rosterItems", []);
-					MessageBox.error("Data loading failed..!!");
-					BusyIndicator.hide();
-				}
 
-			}.bind(this));
+		_fnFetchListRoster: async function (loadColumn) {
+			BusyIndicator.show(0);
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchRosterDaysStructure?" + "ROSTER_HEADER_ID=" + this.RosterID;
+			var response = await ServiceHandler.get(this.sPath);
+			if (response.status === 200) {
+				this.RosteringListModel.setProperty("/rosterItems", response.rows);
+				this.RosteringListModel.setProperty("/rosterName", response.rosterName);
+				this.RosteringListModel.setProperty("/customRosterStatus", response.rosterStatus);
+				this.rosterDays = response.rosterDays;
+				if (loadColumn) {
+					this._createDynamicColumn(response.rosterDays);
+				}
+			} else {
+				this.RosteringListModel.setProperty("/rosterItems", []);
+				MessageBox.error("Data loading failed..!!");
+				BusyIndicator.hide();
+			}
 		},
+
 		onChangeSlider: function (oEvent) {
 			BusyIndicator.show(0);
 			var iValue = oEvent.getSource().getValue();
@@ -161,6 +146,7 @@ sap.ui.define([
 			this._createDynamicColumn(this.rosterDays);
 			// BusyIndicator.hide();
 		},
+
 		_fnHandleColumn: function (iValue) {
 			if (iValue === 4) {
 				this.sWidthDayType = "3.2rem";
@@ -208,6 +194,7 @@ sap.ui.define([
 			this.sWidthAction = this.sWidthTotalHours;
 
 		},
+
 		_createDynamicColumn: function (rosterDays) {
 			BusyIndicator.show(0);
 			var oRosteringListTable = this.getView().byId("tblRosteringList");
@@ -227,8 +214,8 @@ sap.ui.define([
 				"sEnabled": false,
 				"sControl": "Text",
 				"sModel": "RosteringListModel>/jobTitles",
-				"sItemText": "{RosteringListModel>jobTitleDesc}",
-				"sItemKey": "{RosteringListModel>jobCodeId}",
+				"sItemText": "{RosteringListModel>JOB_TITLE_DESC}",
+				"sItemKey": "{RosteringListModel>JOB_CODE_ID}",
 			}, {
 				"width": "6rem",
 				"sortProperty": "JOB_CODE",
@@ -243,8 +230,8 @@ sap.ui.define([
 				"sEnabled": false,
 				"sControl": "Text",
 				"sModel": "RosteringListModel>/jobTitles",
-				"sItemText": "{RosteringListModel>jobTitleDesc}",
-				"sItemKey": "{RosteringListModel>jobCodeId}",
+				"sItemText": "{RosteringListModel>JOB_TITLE_DESC}",
+				"sItemKey": "{RosteringListModel>JOB_CODE_ID}",
 			}, {
 				"width": "6rem",
 				"sortProperty": "JOB_TITLE_SEQ_NO",
@@ -299,9 +286,9 @@ sap.ui.define([
 					"sEnabled": sEnabled,
 					"sControl": "ComboBox",
 					"sModel": "RosteringListModel>/planningValues",
-					"sItemText": "{RosteringListModel>LookupName}",
-					"sItemKey": "{RosteringListModel>Code}",
-					"day" : l.toString()
+					"sItemText": "{RosteringListModel>LOOKUP_NAME}",
+					"sItemKey": "{RosteringListModel>CODE}",
+					"day": l.toString()
 				};
 				var objSchedulingStatus = {
 					// "id": sId,
@@ -316,7 +303,7 @@ sap.ui.define([
 						"visible": true
 					}, {
 						"width": "100%",
-						"textAlign": "Center", 
+						"textAlign": "Center",
 						"text": "Schedule",
 						"visible": true
 					}],
@@ -327,7 +314,7 @@ sap.ui.define([
 					"sModel": "RosteringListModel>/schedulingValues",
 					"sItemText": "{RosteringListModel>ACTUAL_SLOTS}",
 					"sItemKey": "{RosteringListModel>SHIFT_CODE}",
-					"day" : l.toString()
+					"day": l.toString()
 				};
 				var objDaySlots = {
 					// "id": sId,
@@ -350,9 +337,8 @@ sap.ui.define([
 					"nameBinding": sNameBinding,
 					"sEnabled": false,
 					"sControl": "Text",
-					"day" : l.toString()
+					"day": l.toString()
 				};
-
 				var objDayTotalHours = {
 					// "id": sId,
 					"headerSpan": headerSpan,
@@ -374,9 +360,8 @@ sap.ui.define([
 					"nameBinding": sNameBinding,
 					"sEnabled": false,
 					"sControl": "Text",
-					"day" : l.toString()
+					"day": l.toString()
 				};
-
 				var objActions = {
 					// "id": sId,
 					"headerSpan": headerSpan,
@@ -398,18 +383,14 @@ sap.ui.define([
 					"nameBinding": "DAY_" + l.toString(),
 					"sEnabled": sEnabled,
 					"sControl": "Button",
-					"day" : l.toString()
+					"day": l.toString()
 				};
-
 				aColumnData.push(objDayType);
 				aColumnData.push(objSchedulingStatus);
 				aColumnData.push(objDaySlots);
 				aColumnData.push(objDayTotalHours);
-
 				// aColumnData.push(objActions);
-
 			}
-
 			for (var k = 0; k < aColumnData.length; k++) {
 				var oColumnData = aColumnData[k];
 				var aMultiLabels = [];
@@ -432,7 +413,6 @@ sap.ui.define([
 					multiLabels: aMultiLabels
 				};
 				var oTemplate;
-
 				if (oColumnData.sControl === "ComboBox") {
 					oTemplate = new sap.m.ComboBox({
 						showSecondaryValues: true,
@@ -449,7 +429,6 @@ sap.ui.define([
 					} else {
 						oTemplate.data("columnId", 'IGNORE');
 					}
-
 					var oItemTemplate = new sap.ui.core.ListItem({
 						text: oColumnData.sItemKey,
 						key: oColumnData.sItemKey,
@@ -479,7 +458,6 @@ sap.ui.define([
 						tooltip: oColumnData.templateBinding,
 						name: oColumnData.nameBinding
 					});
-
 				} else {
 					oTemplate = new sap.m.Input({
 						value: oColumnData.templateBinding,
@@ -491,13 +469,13 @@ sap.ui.define([
 						editable: oColumnData.sEnabled
 					});
 				}
-
 				oColumnProperties.template = oTemplate;
 				var oColumn = new sap.ui.table.Column(oColumnData.id, oColumnProperties);
 				oRosteringListTable.addColumn(oColumn);
 			}
 			BusyIndicator.hide();
 		},
+
 		onChange: function (oEvent) {
 			if (oEvent.getSource().data("columnId").indexOf('SCHEDULING_') >= 0) {
 				var sPath = oEvent.getSource().getBindingContext("RosteringListModel").getPath();
@@ -505,10 +483,11 @@ sap.ui.define([
 				var schedulePath = oEvent.getSource().getSelectedItem().getBindingContext("RosteringListModel").getPath();
 				var itemContext = this.RosteringListModel.getProperty(schedulePath);
 				var changingDataDay = oEvent.getSource().data("columnId").split("SCHEDULING_")[1];
-				this.RosteringListModel.setProperty(sPath + "/TOTAL_HOURS_" + changingDataDay,itemContext.TOTAL_HOURS);
-				this.RosteringListModel.setProperty(sPath + "/SLOTS_" + changingDataDay,itemContext.ACTUAL_SLOTS);
+				this.RosteringListModel.setProperty(sPath + "/TOTAL_HOURS_" + changingDataDay, itemContext.TOTAL_HOURS);
+				this.RosteringListModel.setProperty(sPath + "/SLOTS_" + changingDataDay, itemContext.ACTUAL_SLOTS);
 			}
 		},
+
 		onPressAddSlotLocal: function (oEvent) {
 			var aListSlot = this.RosteringListModel.getProperty(this.sBindPath);
 			var oAddSlot = {
@@ -525,52 +504,76 @@ sap.ui.define([
 			aListSlot.push(oAddSlot);
 			this.RosteringListModel.setProperty(this.sBindPath, aListSlot);
 		},
-		onPressAddSlot: function (oEvent) {
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=addSlot";
+
+		onPressAddSlot: async function (oEvent) {
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/addSlot";
 			var oPayload = {
 				"ROSTER_HEADER_ID": this.slotContext.ROSTER_HEADER_ID,
 				"ROSTER_ITEM_ID": this.slotContext.ROSTER_ITEM_ID,
 				"DAY_NUMBER": this.slotDayNumber
 			};
-			var oJsonModel = new JSONModel();
-			var oHeader = this._fnHeaders();
-			oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
-				oHeader);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 201) {
-					// MessageBox.success("Roster Created Successfully..!!");
-					this.RosteringListModel.setProperty(this.slotPath, oData.data.results);
-				} else {
-					MessageBox.error("Failed to add slots..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			var response = await ServiceHandler.post(this.sPath, oPayload);
+			console.log(response)
+			if (oData.data.status === 201) {
+				// MessageBox.success("Roster Created Successfully..!!");
+				this.RosteringListModel.setProperty(this.slotPath, oData.data.results);
+			} else {
+				MessageBox.error("Failed to add slots..!!");
+			}
+			BusyIndicator.hide();
+			// var oJsonModel = new JSONModel();
+			// var oHeader = this._fnHeaders();
+			// oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
+			// 	oHeader);
+			// oJsonModel.attachRequestCompleted(function (jsonData, response) {
+			// 	var oData = jsonData.getSource().getData();
+			// 	if (oData.data.status === 201) {
+			// 		// MessageBox.success("Roster Created Successfully..!!");
+			// 		this.RosteringListModel.setProperty(this.slotPath, oData.data.results);
+			// 	} else {
+			// 		MessageBox.error("Failed to add slots..!!");
+			// 	}
+			// 	BusyIndicator.hide();
+			// }.bind(this));
 		},
-		_fnFetchSlot: function (oContextObj, oControl) {
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchSlot";
-			var oPayload = {
-				"ROSTER_HEADER_ID": this.RosterID,
-				"ROSTER_ITEM_ID": oContextObj.ROSTER_ITEM_ID,
-				"DAY_NUMBER": this.slotDayNumber
-			};
-			var oHeader = this._fnHeaders();
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
-				oHeader);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 200) {
-					this.RosteringListModel.setProperty(this.sBindPath, oData.data.results);
-					this._fnOpenSlotsFragment(oControl);
-				} else {
-					this.RosteringListModel.setProperty(this.sBindPath, []);
-					MessageBox.error("Slot fetching failed..!!");
-					BusyIndicator.hide();
-				}
 
-			}.bind(this));
+		_fnFetchSlot: async function (oContextObj, oControl) {
+			// this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=fetchSlot";
+			var param = "ROSTER_HEADER_ID=" + this.RosterID + "&ROSTER_ITEM_ID=" + oContextObj.ROSTER_ITEM_ID + "&DAY_NUMBER=" + this.slotDayNumber;
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchSlot?" + param;
+			// var oPayload = {
+			// 	"ROSTER_HEADER_ID": this.RosterID,
+			// 	"ROSTER_ITEM_ID": oContextObj.ROSTER_ITEM_ID,
+			// 	"DAY_NUMBER": this.slotDayNumber
+			// };
+			var response = await ServiceHandler.get(this.sPath);
+			console.log(response)
+			if (oData.data.status === 200) {
+				this.RosteringListModel.setProperty(this.sBindPath, oData.data.results);
+				this._fnOpenSlotsFragment(oControl);
+			} else {
+				this.RosteringListModel.setProperty(this.sBindPath, []);
+				MessageBox.error("Slot fetching failed..!!");
+				BusyIndicator.hide();
+			}
+			// var oHeader = this._fnHeaders();
+			// var oJsonModel = new JSONModel();
+			// oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
+			// 	oHeader);
+			// oJsonModel.attachRequestCompleted(function (jsonData, response) {
+			// 	var oData = jsonData.getSource().getData();
+			// 	if (oData.data.status === 200) {
+			// 		this.RosteringListModel.setProperty(this.sBindPath, oData.data.results);
+			// 		this._fnOpenSlotsFragment(oControl);
+			// 	} else {
+			// 		this.RosteringListModel.setProperty(this.sBindPath, []);
+			// 		MessageBox.error("Slot fetching failed..!!");
+			// 		BusyIndicator.hide();
+			// 	}
+
+			// }.bind(this));
 		},
+
 		_fnHandleSlotsFragment: function (oContextObj, iDay, sPath, oEvent) {
 			var oControl = oEvent.getSource();
 			this.slotPath = sPath;
@@ -581,44 +584,45 @@ sap.ui.define([
 			this._fnFetchSlot(oContextObj, oControl);
 
 		},
+
 		_fnOpenSlotsFragment: function (oControl) {
 			if (!this._popOverSlotFrag) {
 				// create popover
 				this._popOverSlotFrag = sap.ui.xmlfragment(this.createId("fragSlotPopover"),
-					"planningshiftrostering.planning.fragment.slotPopover",
+					"rosterplanningvk.rosterplanningvk.fragment.slotPopover",
 					this
 				);
 				this.getView().addDependent(this._popOverSlotFrag);
 			}
 			var oTemplate = new sap.m.ColumnListItem({
 				cells: [new sap.m.Text({
-						text: "{RosteringListModel>SLOT_NUMBER}"
-					}),
-					new sap.m.TimePicker({
-						value: "{RosteringListModel>START_TIME}",
-						valueFormat: "HH:mm",
-						displayFormat: "HH:mm",
-						valueState: "{RosteringListModel>VS_START_TIME}"
-					}),
-					new sap.m.TimePicker({
-						value: "{RosteringListModel>END_TIME}",
-						valueFormat: "HH:mm",
-						displayFormat: "HH:mm",
-						valueState: "{RosteringListModel>VS_END_TIME}"
-					}),
-					new sap.ui.core.Icon({
-						src: "sap-icon://sys-cancel",
-						press: function (oEvent) {
-							BusyIndicator.show(0);
-							// var oContextObj = oEvent.getSource().getBindingContext("RosteringListModel").getObject();
-							var sPath = oEvent.getSource().getBindingContext("RosteringListModel").getPath();
-							this.RosteringListModel.setProperty(sPath + "/IS_DELETED", "Y");
-							this.RosteringListModel.refresh(true);
-							// this._fnDeleteSlotsLocal(oEvent, oContextObj);
-							// this._fnDeleteSlots(oEvent, oContextObj);
-							BusyIndicator.hide(0);
-						}.bind(this)
-					})
+					text: "{RosteringListModel>SLOT_NUMBER}"
+				}),
+				new sap.m.TimePicker({
+					value: "{RosteringListModel>START_TIME}",
+					valueFormat: "HH:mm",
+					displayFormat: "HH:mm",
+					valueState: "{RosteringListModel>VS_START_TIME}"
+				}),
+				new sap.m.TimePicker({
+					value: "{RosteringListModel>END_TIME}",
+					valueFormat: "HH:mm",
+					displayFormat: "HH:mm",
+					valueState: "{RosteringListModel>VS_END_TIME}"
+				}),
+				new sap.ui.core.Icon({
+					src: "sap-icon://sys-cancel",
+					press: function (oEvent) {
+						BusyIndicator.show(0);
+						// var oContextObj = oEvent.getSource().getBindingContext("RosteringListModel").getObject();
+						var sPath = oEvent.getSource().getBindingContext("RosteringListModel").getPath();
+						this.RosteringListModel.setProperty(sPath + "/IS_DELETED", "Y");
+						this.RosteringListModel.refresh(true);
+						// this._fnDeleteSlotsLocal(oEvent, oContextObj);
+						// this._fnDeleteSlots(oEvent, oContextObj);
+						BusyIndicator.hide(0);
+					}.bind(this)
+				})
 				]
 			});
 			sap.ui.core.Fragment.byId(this.createId("fragSlotPopover"), "tblSlotList").bindItems({
@@ -628,7 +632,9 @@ sap.ui.define([
 			});
 			this._popOverSlotFrag.openBy(oControl);
 		},
-		_fnDeleteSlotsLocal: function (oEvent, oContextObj) {},
+
+		_fnDeleteSlotsLocal: function (oEvent, oContextObj) { },
+
 		_fnDeleteSlots: function (oEvent, oContextObj) {
 			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=deleteSlot";
 			var oPayload = {
@@ -652,9 +658,11 @@ sap.ui.define([
 				BusyIndicator.hide();
 			}.bind(this));
 		},
+
 		onCancelPopOverSlots: function () {
 			this._popOverSlotFrag.close();
 		},
+
 		_getTimeDifference: function (startTime, endTime) {
 			var start = startTime.split(":");
 			var end = endTime.split(":");
@@ -663,6 +671,7 @@ sap.ui.define([
 			var difference = endMinutes - startMinutes;
 			return difference;
 		},
+
 		convertMinutesToHHmm: function (minutes) {
 			var hours = Math.floor(minutes / 60);
 			var remainingMinutes = minutes % 60;
@@ -672,6 +681,7 @@ sap.ui.define([
 
 			return hoursString + ':' + minutesString;
 		},
+
 		onSaveSlotsLocal: function (oEvent) {
 			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=saveSlot";
 			var aPayload = this.RosteringListModel.getProperty(this.sBindPath);
@@ -703,7 +713,6 @@ sap.ui.define([
 					}
 
 				}
-
 				if (t > 0 && slotText.trim().length) {
 					slotText = slotText + " | " + oPayload.START_TIME + " - " + oPayload.END_TIME;
 					totalMinutes += this._getTimeDifference(oPayload.START_TIME, oPayload.END_TIME);
@@ -711,7 +720,6 @@ sap.ui.define([
 					slotText = oPayload.START_TIME + " - " + oPayload.END_TIME;
 					totalMinutes += this._getTimeDifference(oPayload.START_TIME, oPayload.END_TIME);
 				}
-
 			}
 			if (!isAllowedToSave) {
 				this.RosteringListModel.setProperty(this.sBindPath, aPayload);
@@ -743,8 +751,8 @@ sap.ui.define([
 				}.bind(this));
 			}
 			// return;
-
 		},
+
 		onSaveSlots: function (oEvent) {
 			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=saveSlot";
 			var aPayload = this.RosteringListModel.getProperty(this.sBindPath);
@@ -770,7 +778,7 @@ sap.ui.define([
 			// create value help dialog
 			if (!this._dlgCreateRoster) {
 				this._dlgCreateRoster = sap.ui.xmlfragment(this.createId("frgCreateRoster"),
-					"planningshiftrostering.planning.fragment.createRosterFrag",
+					"rosterplanningvk.rosterplanningvk.fragment.createRosterFrag",
 					this
 				);
 				this.getView().addDependent(this._dlgCreateRoster);
@@ -779,105 +787,109 @@ sap.ui.define([
 		},
 
 		onPressAddRoster: function () {
-
 			// create value help dialog
 			if (!this._dlgAddRoster) {
 				this._dlgAddRoster = sap.ui.xmlfragment(this.createId("frgAddRoster"),
-					"planningshiftrostering.planning.fragment.addPositions",
+					"rosterplanningvk.rosterplanningvk.fragment.addPositions",
 					this
 				);
 				this.getView().addDependent(this._dlgAddRoster);
 			}
 			this._dlgAddRoster.open();
 		},
+
 		onSelectionChangePosition: function (oEvent) {
 			var sText = oEvent.getParameter("selectedItem").getText();
 			this.RosteringListModel.setProperty("/selectedJobTitleForRoster", sText);
 		},
+
 		handleFgAddRosterClose: function () {
 			this._dlgAddRoster.close();
 			this._dlgAddRoster.destroy();
 			this._dlgAddRoster = null;
 			this._dlgAddRoster = undefined;
 		},
+
 		handleFgAddRoster: function () {
 			this._fnSaveAdhocDraft();
 			// this._fnAddDefaultRoster();
 			// this.handleFgAddRosterClose(false);
 		},
-		_fnSaveAdhocDraft: function(){
+
+		_fnSaveAdhocDraft: async function () {
 			var aRosterItems = this.RosteringListModel.getProperty("/rosterItems");
+			console.log(aRosterItems)
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=saveData";
-			var oHeader = this._fnHeaders();
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, JSON.stringify(aRosterItems), true, "POST", false, false,
-				oHeader);
-			// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 204) {
-					this._fnAddDefaultRoster();
-					this.handleFgAddRosterClose(false);
-					/*MessageBox.success("Data Saved Successfully..!!");
-					this._fnFetchListRoster(false);
-					this.onNavBack();*/
-				} else {
-					MessageBox.error("Failed to save data..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/saveData";
+			var response = await ServiceHandler.post(this.sPath, aRosterItems);
+			if (response.status === 201) {
+				this._fnAddDefaultRoster();
+				this.handleFgAddRosterClose(false);
+				/*MessageBox.success("Data Saved Successfully..!!");
+				this._fnFetchListRoster(false);
+				this.onNavBack();*/
+			} else {
+				MessageBox.error("Failed to save data..!!");
+			}
+			BusyIndicator.hide();
 		},
-		_fnAddDefaultRoster: function () {
+
+		_fnAddDefaultRoster: async function () {
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=addDefaultRoster";
-			var oJsonModel = new JSONModel();
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/addDefaultRoster";
 			var oPayload = {
 				"ROSTER_HEADER_ID": this.RosterID,
 				"JOB_TITLE": this.RosteringListModel.getProperty("/selectedJobTitleForRoster"),
 				"JOB_CODE": this.RosteringListModel.getProperty("/selectedJobCodeForRoster"),
-				"MODIFIED_BY": this._getCurrentUser().name
+				"MODIFIED_BY": this._getCurrentUser().fullName
 			};
-			var oHeader = this._fnHeaders();
-			oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
-				oHeader);
-			// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 201) {
-					MessageBox.success("Job Added Successfully..!!");
-					this._fnFetchListRoster(false);
+			var response = await ServiceHandler.post(this.sPath, oPayload);
+			if (response.status === 201) {
+				MessageBox.success("Job Added Successfully..!!");
+				this._fnFetchListRoster(false);
 
-				} else {
-					MessageBox.error("Failed to add position..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			} else {
+				MessageBox.error("Failed to add position..!!");
+			}
+			BusyIndicator.hide();
 		},
-		onPressSave: function () {
+
+		onPressSave: async function () {
 			var aRosterItems = this.RosteringListModel.getProperty("/rosterItems");
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=saveData";
-			var oHeader = this._fnHeaders();
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, JSON.stringify(aRosterItems), true, "POST", false, false,
-				oHeader);
-			// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 204) {
-					MessageBox.success("Data Saved Successfully..!!");
-					this._fnFetchListRoster(false);
-					this.onNavBack();
-				} else {
-					MessageBox.error("Failed to save data..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/saveData";
+			var response = await ServiceHandler.post(this.sPath, aRosterItems);
+			if (response.status === 201) {
+				MessageBox.success("Data Saved Successfully..!!");
+				this._fnFetchListRoster(false);
+				this.onNavBack();
+			} else {
+				MessageBox.error("Failed to save data..!!");
+			}
+			BusyIndicator.hide();
+			// this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=saveData";
+			// var oHeader = this._fnHeaders();
+			// var oJsonModel = new JSONModel();
+			// oJsonModel.loadData(this.sPath, JSON.stringify(aRosterItems), true, "POST", false, false,
+			// 	oHeader);
+			// // oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
+			// oJsonModel.attachRequestCompleted(function (jsonData, response) {
+			// 	var oData = jsonData.getSource().getData();
+			// 	if (oData.data.status === 204) {
+			// 		MessageBox.success("Data Saved Successfully..!!");
+			// 		this._fnFetchListRoster(false);
+			// 		this.onNavBack();
+			// 	} else {
+			// 		MessageBox.error("Failed to save data..!!");
+			// 	}
+			// 	BusyIndicator.hide();
+			// }.bind(this));
 		},
+
 		onNavBack: function () {
 			this.oRouter.navTo("RouteHome", true);
 		},
+
 		onPressSubmit: function () {
 			if (this.aDataToSave.length === 0) {
 				return sap.m.MessageToast.show("No changes done to save..!!");
@@ -933,6 +945,7 @@ sap.ui.define([
 			}
 
 		},
+
 		navBack: function () {
 			var oRosteringListTable = this.getView().byId("tblRosteringList");
 			oRosteringListTable.removeAllColumns([]);
@@ -946,12 +959,14 @@ sap.ui.define([
 			this._dlgCreateRoster = null;
 			this._dlgCreateRoster = undefined;
 		},
+
 		handleFgProceedCreateRoster: function () {
 			var oRosteringListModel = this.getOwnerComponent().getModel("RosteringListModel");
 			var sPosition = oRosteringListModel.getProperty("/selectedPositionForCustomRoster");
 			var sWeeks = oRosteringListModel.getProperty("/rosteringWeeks");
 			this.oRouter.navTo("CreateCustomRoster");
 		},
+
 		onPressDeleteRoster: function () {
 			BusyIndicator.show(0);
 			var oTable = this.byId("tblRosteringList");
@@ -974,42 +989,36 @@ sap.ui.define([
 				BusyIndicator.hide();
 			}
 		},
-		_fnDeleteRosters: function () {
+
+		_fnDeleteRosters: async function () {
 			var oTable = this.byId("tblRosteringList");
 			var aSelectedIndices = oTable.getSelectedIndices();
 			var aDataToDelete = [];
 			for (var i = 0; i < aSelectedIndices.length; i++) {
 				var index = aSelectedIndices[i];
-				var sRelativePath = "/rosterItems/" + index;
-
+				var sRelativePath = "/rosterItems/" + index
 				var oSelectedItem = this.RosteringListModel.getProperty(sRelativePath);
 				aDataToDelete.push({
 					"ROSTER_HEADER_ID": oSelectedItem.ROSTER_HEADER_ID,
 					"ROSTER_ITEM_ID": oSelectedItem.ROSTER_ITEM_ID,
-					"MODIFIED_BY": this._getCurrentUser().name
+					"MODIFIED_BY": this._getCurrentUser().fullName
 				});
+			};
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/deletePosition";
+			var response = await ServiceHandler.delete(this.sPath, aDataToDelete);
+			if (response.status === 202) {
+				MessageBox.success("Roster Deleted Successfully..!!");
+				this._fnFetchListRoster(false);
+				oTable.setSelectedIndex(-1);
+			} else {
+				MessageBox.error("Failed to delete roster..!!");
 			}
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=deletePosition";
-			var oHeader = this._fnHeaders();
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, JSON.stringify(aDataToDelete), true, "POST", false, false,
-				oHeader);
-			// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 202) {
-					MessageBox.success("Roster Deleted Successfully..!!");
-					this._fnFetchListRoster(false);
-					oTable.setSelectedIndex(-1);
-				} else {
-					MessageBox.error("Failed to delete roster..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			BusyIndicator.hide();
 		},
-		onChangeRosterStatus: function (oEvent) {
+
+		onChangeRosterStatus: async function (oEvent) {
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=markRosterStatus";
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/markRosterStatus";
 			var sState = oEvent.getSource().getState();
 			var sStateValue = "ACTIVE";
 			if (sState) {
@@ -1021,40 +1030,31 @@ sap.ui.define([
 			var oPayload = {
 				"STATUS": sStateValue,
 				"ROSTER_HEADER_ID": iRosterId,
-				"MODIFIED_BY": this._getCurrentUser().name
+				"MODIFIED_BY": this._getCurrentUser().fullName
 			};
-			var oHeader = this._fnHeaders();
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
-				oHeader);
-			// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 202) {
-					MessageBox.success("Roster Updated Successfully..!!");
-				} else {
-					MessageBox.error("Failed to update roster..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			var response = await ServiceHandler.put(this.sPath, oPayload);
+			if (response.status === 202) {
+				MessageBox.success("Roster Updated Successfully..!!");
+			} else {
+				MessageBox.error("Failed to update roster..!!");
+			}
+			BusyIndicator.hide();
 		},
-		onPressExport: function () {
+
+		onPressExport: async function () {
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=downloadData&rosterId=" + this.RosterID;
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 1) {
-					this._fnDownloadData(oData.data.results);
-					// this.RosteringListModel.setProperty("/rosterList", oData.data.results);
-				} else {
-					this.RosteringListModel.setProperty("/rosterList", []);
-					MessageBox.error("Data loading failed..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/downloadData?rosterId=" + this.RosterID;
+			var response = await ServiceHandler.get(this.sPath);
+			if (response.status === 200) {
+				this._fnDownloadData(response.results);
+				// this.RosteringListModel.setProperty("/rosterList", oData.data.results);
+			} else {
+				this.RosteringListModel.setProperty("/rosterList", []);
+				MessageBox.error("Data loading failed..!!");
+			}
+			BusyIndicator.hide();
 		},
+
 		createColumnConfig: function () {
 			return [{
 				label: "Roster Name",
@@ -1083,11 +1083,12 @@ sap.ui.define([
 			}, {
 				label: "Slots",
 				property: "SLOTS"
-			},  {
+			}, {
 				label: "Total Hours",
 				property: "TOTAL_HOURS"
 			}];
 		},
+
 		_fnDownloadData: function (aData) {
 			var aCols, oSettings, oSheet;
 			aCols = this.createColumnConfig();
@@ -1098,13 +1099,10 @@ sap.ui.define([
 				dataSource: aData,
 				fileName: "Roster_" + this.RosteringListModel.getProperty("/rosterName") + ".xlsx"
 			};
-
 			oSheet = new Spreadsheet(oSettings);
-			oSheet.build()
-				.then(function () {
-					sap.m.MessageToast.show("Roster Downloaded successfully..!!");
-				})
-				.finally(oSheet.destroy);
+			oSheet.build().then(function () {
+				sap.m.MessageToast.show("Roster Downloaded successfully..!!");
+			}).finally(oSheet.destroy);
 		},
 	});
 });

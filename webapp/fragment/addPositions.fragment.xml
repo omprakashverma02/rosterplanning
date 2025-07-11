@@ -10,7 +10,7 @@
 							<Label text="Select Job" labelFor="cmbSelectedPositionForRoster"/>
 							<ComboBox selectionChange="onSelectionChangePosition" id="cmbSelectedPositionForRoster" required="true" selectedKey="{RosteringListModel>/selectedJobCodeForRoster}" items="{RosteringListModel>/jobTitles}"
 								showSecondaryValues="true">
-								<core:ListItem key="{RosteringListModel>jobCodeId}" text="{RosteringListModel>jobTitleDesc}" additionalText="{RosteringListModel>jobCodeId}"/>
+								<core:ListItem key="{RosteringListModel>JOB_CODE_ID}" text="{RosteringListModel>JOB_TITLE_DESC}" additionalText="{RosteringListModel>JOB_CODE_ID}"/>
 							</ComboBox>
 						</f:content>
 					</f:SimpleForm>

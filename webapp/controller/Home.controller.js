@@ -7,9 +7,10 @@ sap.ui.define([
 	"rosterplanningvk/rosterplanningvk/enum/xlsx.core.min",
 	"sap/ui/export/Spreadsheet",
 	"sap/ui/export/library",
-	 "sap/ui/model/Filter",
-	"sap/ui/model/FilterOperator"
-], function (Controller, JSONModel, models, BusyIndicator, MessageBox, XLSXLib, Spreadsheet, exportLibrary,Filter,FilterOperator) {
+	"sap/ui/model/Filter",
+	"sap/ui/model/FilterOperator",
+	"../util/service"
+], function (Controller, JSONModel, models, BusyIndicator, MessageBox, XLSXLib, Spreadsheet, exportLibrary, Filter, FilterOperator, ServiceHandler) {
 	"use strict";
 
 	var EdmType = exportLibrary.EdmType;
@@ -27,26 +28,26 @@ sap.ui.define([
 			this._onRouteMatched();
 
 		},
-		_onRouteMatched: function (oEvent) {
+
+		_onRouteMatched: async function (oEvent) {
 			var oModel = new JSONModel();
 			this.getOwnerComponent().setModel(oModel, "RosteringListModel");
 			this.RosteringListModel = this.getOwnerComponent().getModel("RosteringListModel");
 			var oUserModel = new JSONModel();
-			//oUserModel.loadData("/services/userapi/currentUser", null, true);
 			BusyIndicator.show(0);
-            oUserModel.loadData(sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/userProfile", null, false);
-			// oUserModel.loadData(sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/userProfile", null, false);
+			await oUserModel.loadData(sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/currentUser", null, false);
 			oUserModel.dataLoaded().then(function () {
 				sap.ui.getCore().setModel(oUserModel, "userapi");
 				this._fnFetchListRoster();
 			}.bind(this));
-			
+
 		},
+
 		_getCurrentUser: function () {
 			var oCurrData = sap.ui.getCore().getModel("userapi").getData();
-			var sUserID = oCurrData.data[0].userDetail[0].USERID;
-			oCurrData.name = (sUserID) ? sUserID : oCurrData.data.userDetail[0].FIRSTNAME;
-			if (!oCurrData.name) {
+			var sUserID = oCurrData.pUserId;
+			oCurrData.fullName = (sUserID) ? sUserID : oCurrData.fullName;
+			if (!oCurrData.fullName) {
 				oCurrData = {
 					name: "Default_User",
 					displayName: "Default_User"
@@ -54,6 +55,7 @@ sap.ui.define([
 			}
 			return oCurrData;
 		},
+
 		_fnHeaders: function () {
 			var oHeader = {
 				"Content-Type": "application/json; charset=utf-8",
@@ -64,6 +66,7 @@ sap.ui.define([
 			};
 			return oHeader;
 		},
+
 		//Fetch Token for Making an OData call
 		fetchTokenForSubmit: function (requestUrl) {
 			var token = "";
@@ -83,11 +86,10 @@ sap.ui.define([
 			});
 			return token;
 		},
+
 		onPressDeleteRoster: function () {
 			BusyIndicator.show(0);
-
 			var oTable = this.getView().byId("tblCustomRoster");
-			// var oSelectedItems = oTable.getSelectedItems();
 			var aSelectedIndices = oTable.getSelectedIndices();
 			if (!aSelectedIndices.length) {
 				BusyIndicator.hide();
@@ -106,45 +108,33 @@ sap.ui.define([
 				});
 				BusyIndicator.hide();
 			}
-
 		},
-		_fnDeleteRoster: function () {                                                              
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=deleteRoster";
-			var oJsonModel = new JSONModel();
+
+		_fnDeleteRoster: async function () {
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/deleteRoster";
 			var aRequestData = [];
 			var oTable = this.getView().byId("tblCustomRoster");
 			var aSelectedIndices = oTable.getSelectedIndices();
 			for (var t = 0; t < aSelectedIndices.length; t++) {
-				// var oSelectedItem = aSelectedIndices[t];
 				var index = aSelectedIndices[t];
 				var sRelativePath = "/rosterList/" + index;
-
 				var oSelectedItem = this.RosteringListModel.getProperty(sRelativePath);
-				// var oContextObj = oSelectedItem.getBindingContext("RosteringListModel").getObject();
 				var oRequestData = {
 					ROSTER_HEADER_ID: oSelectedItem.ROSTER_HEADER_ID,
-					"MODIFIED_BY": this._getCurrentUser().name,
+					"MODIFIED_BY": this._getCurrentUser().fullName,
 					"ROSTER_NAME": oSelectedItem.ROSTER_NAME
 				};
 				aRequestData.push(oRequestData);
 			}
-
-			var oHeader = this._fnHeaders();
-			oJsonModel.loadData(this.sPath, JSON.stringify(aRequestData), true, "POST", false, false,
-				oHeader);
-			// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 202) {
-					MessageBox.success(oData.data.message);
-					this._fnFetchListRoster();
-				} else {
-					// MessageBox.error("Failed to delete roster..!!");
-					MessageBox.error(oData.data.message);
-					this._fnFetchListRoster();
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			var response = await ServiceHandler.delete(this.sPath, aRequestData);
+			if (response.status === 202) {
+				MessageBox.success(response.message);
+				this._fnFetchListRoster();
+			} else {
+				MessageBox.error(response.message);
+				this._fnFetchListRoster();
+			}
+			BusyIndicator.hide();
 		},
 
 		onPressCreateRostering: function (oEvent) {
@@ -155,46 +145,45 @@ sap.ui.define([
 			// create value help dialog
 			if (!this._dlgCreateRoster) {
 				this._dlgCreateRoster = sap.ui.xmlfragment(this.createId("frgCreateRoster"),
-					"planningshiftrostering.planning.fragment.createRosterFrag",
+					"rosterplanningvk.rosterplanningvk.fragment.createRosterFrag",
 					this
 				);
 				this.getView().addDependent(this._dlgCreateRoster);
 			}
 			this._dlgCreateRoster.open();
 		},
+
 		onPressCancelCustomRoster: function () {
 			this._dlgCreateRoster.close();
 			this._dlgCreateRoster.destroy();
 			this._dlgCreateRoster = null;
 			this._dlgCreateRoster = undefined;
 		},
-		_fnFetchListRoster: function () {
+
+		_fnFetchListRoster: async function () {
 			BusyIndicator.show(0);
-			// this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/rosterManagement?cmd=fetchRoster";
 			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/fetchRoster";
-			var oJsonModel = new JSONModel();
-			oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 1) {
-					this.RosteringListModel.setProperty("/rosterList", oData.data.results);
-				} else {
-					this.RosteringListModel.setProperty("/rosterList", []);
-					MessageBox.error("Data loading failed..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+			var response = await ServiceHandler.get(this.sPath);
+			if (response.status === 200) {
+				this.RosteringListModel.setProperty("/rosterList", response.results);
+			} else {
+				this.RosteringListModel.setProperty("/rosterList", []);
+				MessageBox.error("Data loading failed..!!");
+			}
+			BusyIndicator.hide();
 		},
+
 		onPressRefresh: function () {
 			this._fnFetchListRoster();
 		},
+
 		onPressCreateCustomRoster: function () {
 			this._fnCreateRoster();
 		},
-		_fnCreateRoster: function () {
+
+		_fnCreateRoster: async function () {
 			BusyIndicator.show(0);
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=createRoster";
-			var oJsonModel = new JSONModel();
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/createRoster";
 			var sCustomRosterName = this.RosteringListModel.getProperty("/customRosterName");
 			var sCustomRosterCode = this.RosteringListModel.getProperty("/customRosterCode");
 			var sDay = this.RosteringListModel.getProperty("/customRosterDays");
@@ -213,49 +202,47 @@ sap.ui.define([
 					"ROSTER_NAME": sCustomRosterName,
 					"ROSTER_CODE": sCustomRosterCode,
 					"DAY": sDay,
-					"MODIFIED_BY": this._getCurrentUser().name,
+					"MODIFIED_BY": this._getCurrentUser().fullName,
 					"STATUS": sStatus
 				};
-				var oHeader = this._fnHeaders();
-				oJsonModel.loadData(this.sPath, JSON.stringify(oPayload), true, "POST", false, false,
-					oHeader);
-				// oJsonModel.loadData(this.sPath, null, true, "GET", false, false);
-				oJsonModel.attachRequestCompleted(function (jsonData, response) {
-					var oData = jsonData.getSource().getData();
-					if (oData.data.status === 201) {
-						MessageBox.success("Roster Created Successfully..!!");
-						this._fnFetchListRoster();
-						this.onPressCancelCustomRoster();
-					} else if (oData.data.status === 409) {
-						MessageBox.error("Data with same roster code is already exists..!!");
-						/*this._fnFetchListRoster();
-						this.onPressCancelCustomRoster();*/
-					} else {
-						MessageBox.error("Failed to create roster..!!");
-					}
-					BusyIndicator.hide();
-				}.bind(this));
+				var response = await ServiceHandler.post(this.sPath, oPayload);
+				if (response.status === 201) {
+					MessageBox.success("Roster Created Successfully..!!");
+					this._fnFetchListRoster();
+					this.onPressCancelCustomRoster();
+				} else if (response.status === 409) {
+					MessageBox.error("Data with same roster code is already exists..!!");
+					/*this._fnFetchListRoster();
+					this.onPressCancelCustomRoster();*/
+				} else {
+					MessageBox.error("Failed to create roster..!!");
+				}
+				BusyIndicator.hide();
 			}
 
 		},
+
 		onPressRosterName: function (oEvent) {
 			var oContext = oEvent.getSource().getBindingContext("RosteringListModel").getObject();
 			this.oRouter.navTo("CreateCustomRoster", {
 				rosterId: oContext.ROSTER_HEADER_ID
 			});
 		},
+
 		handleUploadChange: function (oEvent) {
-			try{
+			try {
 				BusyIndicator.show(0);
-			var oFileUploader = oEvent.getSource();
-			var file = oFileUploader.oFileUpload.files[0];
-			this.handleMassUpload(file);}
-			catch(oError){
-				
-			}finally{
+				var oFileUploader = oEvent.getSource();
+				var file = oFileUploader.oFileUpload.files[0];
+				this.handleMassUpload(file);
+			}
+			catch (oError) {
+
+			} finally {
 				BusyIndicator.hide();
 			}
 		},
+
 		/**
 		 * on Press Extract Data from the Excel template
 		 */
@@ -305,28 +292,25 @@ sap.ui.define([
 				reader.readAsArrayBuffer(file);
 			}
 		},
-		_fnUploadMass: function (aRequestData) {
-			aRequestData[0].MODIFIED_BY = this._getCurrentUser().name;
-			this.sPath = sap.ui.require.toUrl("planningshiftrostering/planning") + "/Manning/api/rosterManagement?cmd=massUpload";
-			var oJsonModel = new JSONModel();
-			var oHeader = this._fnHeaders();
-			oJsonModel.loadData(this.sPath, JSON.stringify(aRequestData), true, "POST", false, false,
-				oHeader);
-			oJsonModel.attachRequestCompleted(function (jsonData, response) {
-				var oData = jsonData.getSource().getData();
-				if (oData.data.status === 201) {
-					MessageBox.success("Roster Created Successfully..!!");
-					this._fnFetchListRoster();
-					// this.onPressCancelCustomRoster();
-				} else {
-					MessageBox.error("Failed to create roster..!!");
-				}
-				BusyIndicator.hide();
-			}.bind(this));
+
+		_fnUploadMass: async function (aRequestData) {
+			aRequestData[0].MODIFIED_BY = this._getCurrentUser().fullName;
+			this.sPath = sap.ui.require.toUrl("rosterplanningvk/rosterplanningvk") + "/api/roster/rosterManagement/massUpload";
+			var response = await ServiceHandler.post(this.sPath, aRequestData);
+			if (response.status === 201) {
+				MessageBox.success("Roster Created Successfully..!!");
+				this._fnFetchListRoster();
+				// this.onPressCancelCustomRoster();
+			} else {
+				MessageBox.error("Failed to create roster..!!");
+			}
+			BusyIndicator.hide();
 		},
+
 		onPressDownloadTemplate: function () {
 			window.open(sap.ui.require.toUrl("planningshiftrostering/planning") + "/enum/RosterSample.xlsx", "_blank");
 		},
+
 		onPressExport: function () {
 			var aData = this.RosteringListModel.getProperty("/rosterList");
 			this._fnDownloadData(aData);
@@ -371,13 +355,13 @@ sap.ui.define([
 			var aCols, oSettings, oSheet;
 
 			aCols = this.createColumnConfig();
-		
+
 			oSettings = {
 				workbook: {
 					columns: aCols
 				},
 				dataSource: aData,
-				 fileName: "Roster.xlsx"
+				fileName: "Roster.xlsx"
 			};
 
 			oSheet = new Spreadsheet(oSettings);
@@ -387,20 +371,20 @@ sap.ui.define([
 				})
 				.finally(oSheet.destroy);
 		},
-		onSearch:function(oEvent){
+		onSearch: function (oEvent) {
 			var oBinding = this.getView().byId("tblCustomRoster").getBinding("rows");
-				var sValue = oEvent.getParameter("query");
-				var oFilterRosterName = new Filter("ROSTER_NAME", FilterOperator.Contains, sValue);   
-                var oFilterRosterCode = new Filter("ROSTER_CODE", FilterOperator.Contains, sValue);  
-                var oFilterDay = new Filter("DAY", FilterOperator.EQ, sValue);   
-                var oFilterModifiedBy = new Filter("MODIFIED_BY", FilterOperator.Contains, sValue);  
-                var oFilterModifiedOn = new Filter("FORMAT_MODIFIED_ON", FilterOperator.Contains, sValue);   
-                var oFilterStatus = new Filter("STATUS", FilterOperator.Contains, sValue);  
-                var oFilter = new sap.ui.model.Filter({
-                    filters: [oFilterRosterName,oFilterRosterCode,oFilterDay,oFilterModifiedBy,oFilterModifiedOn,oFilterStatus],
-                    and: false
-                });
-                oBinding.filter(oFilter);
+			var sValue = oEvent.getParameter("query");
+			var oFilterRosterName = new Filter("ROSTER_NAME", FilterOperator.Contains, sValue);
+			var oFilterRosterCode = new Filter("ROSTER_CODE", FilterOperator.Contains, sValue);
+			var oFilterDay = new Filter("DAY", FilterOperator.EQ, sValue);
+			var oFilterModifiedBy = new Filter("MODIFIED_BY", FilterOperator.Contains, sValue);
+			var oFilterModifiedOn = new Filter("FORMAT_MODIFIED_ON", FilterOperator.Contains, sValue);
+			var oFilterStatus = new Filter("STATUS", FilterOperator.Contains, sValue);
+			var oFilter = new sap.ui.model.Filter({
+				filters: [oFilterRosterName, oFilterRosterCode, oFilterDay, oFilterModifiedBy, oFilterModifiedOn, oFilterStatus],
+				and: false
+			});
+			oBinding.filter(oFilter);
 		}
 	});
 });
